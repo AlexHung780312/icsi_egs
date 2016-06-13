@@ -36,6 +36,7 @@ for x in train dev; do
     data/$x exp/make_mfcc/$x $mfccdir || exit 1;
   steps/compute_cmvn_stats.sh data/$x exp/make_mfcc/$x $mfccdir || exit 1;
 done
+exit 0
 fi
 
 # Note: the --boost-silence option should probably be omitted by default
@@ -61,16 +62,6 @@ steps/align_si.sh --boost-silence 1.25 --nj 10 --cmd "$train_cmd" \
   data/train data/lang exp/mono0a exp/mono0a_ali || exit 1;
 steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" 1500 12000 \
   data/train data/lang exp/mono0a_ali exp/tri1 || exit 1;
-fi
-
-if [ $stage -le 5 ]; then
-while [ ! -f data/lang_test/tmp/LG.fst ] || \
-   [ -z data/lang_test/tmp/LG.fst ]; do
-  sleep 20;
-done
-sleep 30;
-# or the mono mkgraph.sh might be writing
-# data/lang_test_tgpr/tmp/LG.fst which will cause this to fail.
 fi
 
 if [ $stage -le 6 ]; then
@@ -134,22 +125,26 @@ steps/align_fmllr.sh --nj 20 --cmd "$train_cmd" \
 # From 3b system, train another SAT system (tri4a)
 steps/train_sat.sh  --cmd "$train_cmd" 4000 32000 \
   data/train data/lang exp/tri3b_ali exp/tri4a || exit 1;
-
-utils/mkgraph.sh data/lang_test \
-  exp/tri4a exp/tri4a/graph || exit 1;
+fi
+if [ $stage -le 12 ]; then
+if [ ! -d exp/tri4a/grap ]; then
+$mkgraph_cmd exp/tri4a/mkgraph.log \
+  utils/mkgraph.sh data/lang_test \
+    exp/tri4a exp/tri4a/graph || exit 1;
+fi
 steps/decode_fmllr.sh --nj 10 --cmd "$decode_cmd" \
   exp/tri4a/graph data/dev \
   exp/tri4a/decode_dev || exit 1;
 fi
 
-if [ $stage -le 12 ]; then
-steps/align_fmllr.sh --nj 30 --cmd "$train_cmd" \
-  data/train data/lang exp/tri4b exp/tri4b_ali_train || exit 1;
-steps/align_fmllr.sh --nj 30 --cmd "$train_cmd" \
-  data/dev data/lang exp/tri4b exp/tri4b_ali_dev || exit 1;
-fi
-exit 0;
 if [ $stage -le 13 ]; then
+steps/align_fmllr.sh --nj 30 --cmd "$train_cmd" \
+  data/train data/lang exp/tri4a exp/tri4a_ali_train || exit 1;
+steps/align_fmllr.sh --nj 30 --cmd "$train_cmd" \
+  data/dev data/lang exp/tri4a exp/tri4a_ali_dev || exit 1;
+fi
+#exit 0;
+if [ $stage -le 14 ]; then
   # getting results (see RESULTS file)
   for x in exp/*/decode*; do [ -d $x ] && grep Sum $x/score_*/*.sys | utils/best_wer.sh; done 2>/dev/null
   for x in exp/*/decode*; do [ -d $x ] && grep WER $x/wer_* | utils/best_wer.sh; done 2>/dev/null

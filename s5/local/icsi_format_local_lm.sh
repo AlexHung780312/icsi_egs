@@ -5,7 +5,7 @@ if [ -f path.sh ]; then . path.sh; fi
 
 mkdir -p data/lang_test
 
-arpa_lm=data/local/nist_lm/3g/best_fix.o3g.kn.gz
+arpa_lm=data/local/nist_lm/3g/best_fix_prune.o3g.kn.gz
 [ ! -f $arpa_lm ] && echo No such file $arpa_lm && exit 1;
 
 mkdir -p data/lang_test

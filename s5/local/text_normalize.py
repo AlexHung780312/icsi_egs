@@ -4,7 +4,7 @@ import argparse
 import fileinput
 import string
 
-from nltk import word_tokenize
+#from nltk import word_tokenize
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='text normalize)', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -19,5 +19,5 @@ if __name__ == "__main__":
         del cols[0]
         text = ' '.join(cols)
         text = text.upper().replace('.', '').replace('_', '').replace('-', ' ')
-        words = [w.strip('-') for w in word_tokenize(text) if w not in exclude]
+        words = [w.strip(string.punctuation) for w in text.split(' ') if w not in exclude]
         print "%s %s" % (key, " ".join(words))
